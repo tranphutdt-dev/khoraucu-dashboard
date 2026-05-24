@@ -1,0 +1,177 @@
+/* =========================================================
+   globals.css  –  Kho Rau Củ Supply Chain Dashboard
+   Global styles, CSS custom properties, resets
+   ========================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+
+/* ── CSS Custom Properties ──────────────────────────────── */
+:root {
+  /* Brand palette */
+  --bg-base:        #0B1520;
+  --bg-surface:     #0F1F30;
+  --bg-card:        #132032;
+  --bg-card-hover:  #182840;
+  --border-subtle:  rgba(56, 115, 182, 0.18);
+  --border-accent:  rgba(56, 115, 182, 0.45);
+
+  /* Accent colours */
+  --navy:           #1B3A6B;
+  --blue:           #3873B6;
+  --blue-light:     #5B9BD5;
+  --green:          #2D8D54;
+  --green-light:    #3DB870;
+  --teal:           #217887;
+  --teal-light:     #2EA8BE;
+  --amber:          #D4860B;
+  --amber-light:    #F5A623;
+  --red:            #C0392B;
+
+  /* Gradient tokens */
+  --gradient-header: linear-gradient(135deg, #0F1F30 0%, #1B3A6B 60%, #3873B6 100%);
+  --gradient-blue:   linear-gradient(135deg, #1B3A6B, #3873B6);
+  --gradient-green:  linear-gradient(135deg, #1A5C36, #2D8D54);
+  --gradient-teal:   linear-gradient(135deg, #144F5A, #217887);
+  --gradient-amber:  linear-gradient(135deg, #7A4C06, #D4860B);
+  --gradient-card:   linear-gradient(145deg, rgba(19,32,50,0.95), rgba(15,25,40,0.98));
+
+  /* Text */
+  --text-primary:   #F0F6FF;
+  --text-secondary: #8BAAC8;
+  --text-muted:     #4A6A8A;
+  --text-accent:    #5B9BD5;
+
+  /* Shadows */
+  --shadow-card:   0 4px 24px rgba(0, 0, 0, 0.4), 0 1px 4px rgba(0,0,0,0.3);
+  --shadow-glow:   0 0 30px rgba(56, 115, 182, 0.15);
+  --shadow-hover:  0 8px 32px rgba(0, 0, 0, 0.5), 0 0 20px rgba(56, 115, 182, 0.2);
+
+  /* Spacing */
+  --radius-sm:  8px;
+  --radius-md:  12px;
+  --radius-lg:  16px;
+  --radius-xl:  24px;
+
+  /* Transitions */
+  --transition-fast:   0.15s ease;
+  --transition-normal: 0.25s ease;
+  --transition-slow:   0.4s ease;
+}
+
+/* ── Reset ──────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Scrollbar ──────────────────────────────────────────── */
+::-webkit-scrollbar        { width: 6px; height: 6px; }
+::-webkit-scrollbar-track  { background: var(--bg-base); }
+::-webkit-scrollbar-thumb  { background: var(--navy); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--blue); }
+
+/* ── Selection ──────────────────────────────────────────── */
+::selection { background: rgba(56, 115, 182, 0.35); color: var(--text-primary); }
+
+/* ── Typography helpers ─────────────────────────────────── */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+/* ── Utility: fade-in animation ─────────────────────────── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1);    }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ── Loading spinner ─────────────────────────────────────── */
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border-subtle);
+  border-top-color: var(--blue);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* ── Glassmorphism base ─────────────────────────────────── */
+.glass {
+  background: rgba(19, 32, 50, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+}
+
+/* ── Focus visible ──────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+/* ── Input base ─────────────────────────────────────────── */
+input[type="date"] {
+  font-family: 'Outfit', sans-serif;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius-sm);
+  padding: 8px 14px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  color-scheme: dark;
+}
+
+input[type="date"]:hover,
+input[type="date"]:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(56,115,182,0.15);
+  outline: none;
+}

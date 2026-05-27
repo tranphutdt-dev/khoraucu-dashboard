@@ -33,12 +33,14 @@ export default function GroupComparisonTable({ data, numDays = 1 }) {
               <th style={thStyle}>Tổng Drop</th>
               <th style={thStyle}>TB Kg / Người / Ngày</th>
               <th style={thStyle}>TB Drop / Người / Ngày</th>
+              <th style={thStyle}>TB Drop / Người / Giờ</th>
             </tr>
           </thead>
           <tbody>
             {data.map((row, idx) => {
               const avgKg = row.count > 0 ? (row.tongKg / row.count / numDays) : 0;
               const avgDrop = row.count > 0 ? (row.tongDrop / row.count / numDays) : 0;
+              const avgDropPerHour = row.activeHours > 0 ? (row.tongDrop / row.activeHours) : 0;
 
               return (
                 <tr
@@ -67,6 +69,9 @@ export default function GroupComparisonTable({ data, numDays = 1 }) {
                   </td>
                   <td style={{ padding: '12px 12px', textAlign: 'right', fontSize: '0.95rem', fontWeight: 700, color: '#F38144' }}>
                     {Number(avgDrop).toLocaleString('vi-VN', { maximumFractionDigits: 2 })}
+                  </td>
+                  <td style={{ padding: '12px 12px', textAlign: 'right', fontSize: '0.95rem', fontWeight: 700, color: 'var(--amber)' }}>
+                    {Number(avgDropPerHour).toLocaleString('vi-VN', { maximumFractionDigits: 2 })}
                   </td>
                 </tr>
               );

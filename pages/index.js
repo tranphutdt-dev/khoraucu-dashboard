@@ -13,6 +13,7 @@ import TrendChart       from '../components/TrendChart';
 import WorkerTable      from '../components/WorkerTable';
 import GroupSummaryTable from '../components/GroupSummaryTable';
 import CategorySummaryTable from '../components/CategorySummaryTable';
+import GroupComparisonTable from '../components/GroupComparisonTable';
 import HourlyHeatmap    from '../components/HourlyHeatmap';
 
 import styles from '../styles/Dashboard.module.css';
@@ -216,6 +217,20 @@ export default function Dashboard() {
   const filteredPrevRangeRows = useMemo(() => filterByTab(prevRangeRows, activeTab), [prevRangeRows, activeTab]);
   const prevGroupedRows = useMemo(() => groupRowsByWorker(filteredPrevRangeRows), [filteredPrevRangeRows]);
 
+  const numDays = useMemo(() => {
+    if (!startDate || !endDate) return 1;
+    return getDaysDiff(startDate, endDate) + 1;
+  }, [startDate, endDate]);
+
+  const rangeDropRows = useMemo(() => {
+    if (!startDate || !endDate) return dropHourlyRows;
+    return dropHourlyRows.filter(r => r.date >= startDate && r.date <= endDate);
+  }, [dropHourlyRows, startDate, endDate]);
+
+  const filteredRangeDropRows = useMemo(() => filterByTab(rangeDropRows, activeTab), [rangeDropRows, activeTab]);
+
+  const totalDrop = useMemo(() => filteredRangeDropRows.reduce((s, r) => s + (r.tongDrop || 0), 0), [filteredRangeDropRows]);
+
   const trendData = useMemo(() => buildTrendData(rows, startDate || '', endDate || '', activeTab), [rows, startDate, endDate, activeTab]);
   const kpis = useMemo(() => computeKPIs(groupedRows, prevGroupedRows), [groupedRows, prevGroupedRows]);
 
@@ -259,6 +274,29 @@ export default function Dashboard() {
       }
     ];
   }, [activeTab, groupedRows, linkerPST, linkerNVCT, linkerGH]);
+
+  const tongQuanGroupStats = useMemo(() => {
+    if (activeTab !== 'tongquan' || groupedRows.length === 0) return [];
+    
+    // Create a map of worker -> total drops
+    const dropMap = new Map();
+    filteredRangeDropRows.forEach(r => {
+      dropMap.set(r.nguoi, (dropMap.get(r.nguoi) || 0) + (r.tongDrop || 0));
+    });
+
+    const map = new Map();
+    groupedRows.forEach(r => {
+      const nhom = r.nhom || 'Khác';
+      if (!map.has(nhom)) {
+        map.set(nhom, { nhom, count: 0, tongKg: 0, tongDrop: 0 });
+      }
+      const existing = map.get(nhom);
+      existing.count += 1;
+      existing.tongKg += r.tongKg;
+      existing.tongDrop += dropMap.get(r.nguoi) || 0;
+    });
+    return Array.from(map.values()).sort((a, b) => b.tongKg - a.tongKg);
+  }, [activeTab, groupedRows, filteredRangeDropRows]);
 
   const catDataGrouped = useMemo(() => {
     const map = new Map();
@@ -447,12 +485,21 @@ export default function Dashboard() {
             />
             <KPICard
               icon="📈"
-              label="Năng suất TB / người"
-              value={kpis.workerCount > 0 ? +(kpis.totalKg / kpis.workerCount).toFixed(2) : 0}
-              unit="kg"
+              label="Năng suất TB/Người/Ngày"
+              value={kpis.workerCount > 0 && numDays > 0 ? +(kpis.totalKg / kpis.workerCount / numDays).toFixed(2) : 0}
+              unit="kg/ngày"
               subtitle={`Giai đoạn: ${fmtDisplay(startDate)} - ${fmtDisplay(endDate)}`}
               accentColor="var(--green)"
               delay={240}
+            />
+            <KPICard
+              icon="⚡"
+              label="Drop TB/Người/Ngày"
+              value={kpis.workerCount > 0 && numDays > 0 ? +(totalDrop / kpis.workerCount / numDays).toFixed(2) : 0}
+              unit="lượt/ngày"
+              subtitle={`Tổng drop: ${totalDrop.toLocaleString('vi-VN')} lượt`}
+              accentColor="#F38144"
+              delay={320}
             />
           </div>
 
@@ -554,6 +601,11 @@ export default function Dashboard() {
 
             {activeTab === 'tongquan' && catDataGrouped.length > 0 && (
               <CategorySummaryTable data={catDataGrouped} />
+            )}
+
+            {/* ── Group Comparison Table (Tổng quan only) ── */}
+            {activeTab === 'tongquan' && (
+              <GroupComparisonTable data={tongQuanGroupStats} numDays={numDays} />
             )}
 
             {/* ── Hourly heatmap (Tổng quan only) ── */}

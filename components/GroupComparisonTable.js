@@ -40,7 +40,7 @@ export default function GroupComparisonTable({ data, numDays = 1 }) {
             {data.map((row, idx) => {
               const avgKg = row.count > 0 ? (row.tongKg / row.count / numDays) : 0;
               const avgDrop = row.count > 0 ? (row.tongDrop / row.count / numDays) : 0;
-              const avgDropPerHour = avgDrop / 8; // Divide by standard 8 hours shift
+              const avgDropPerHour = row.activeHours > 0 ? (row.tongDrop / row.activeHours) : 0;
 
               return (
                 <tr

@@ -233,7 +233,21 @@ export default function Dashboard() {
     return rangeDropRows.filter(r => allowedWorkers.has(r.nguoi));
   }, [rangeDropRows, groupedRows]);
 
-  const totalDrop = useMemo(() => filteredRangeDropRows.reduce((s, r) => s + (r.tongDrop || 0), 0), [filteredRangeDropRows]);
+  const dropStats = useMemo(() => {
+    let totalDrop = 0;
+    let activeHours = 0;
+    filteredRangeDropRows.forEach(r => {
+      totalDrop += (r.tongDrop || 0);
+      if (r.hours) {
+        Object.values(r.hours).forEach(v => {
+          if (v > 0) activeHours++;
+        });
+      }
+    });
+    return { totalDrop, activeHours };
+  }, [filteredRangeDropRows]);
+
+  const { totalDrop, activeHours } = dropStats;
 
   const trendData = useMemo(() => buildTrendData(rows, startDate || '', endDate || '', activeTab), [rows, startDate, endDate, activeTab]);
   const kpis = useMemo(() => computeKPIs(groupedRows, prevGroupedRows), [groupedRows, prevGroupedRows]);
@@ -523,9 +537,9 @@ export default function Dashboard() {
             <KPICard
               icon="⏱️"
               label="Drop TB/Người/Giờ"
-              value={kpis.workerCount > 0 && numDays > 0 ? +(totalDrop / kpis.workerCount / numDays / 8).toFixed(2) : 0}
+              value={activeHours > 0 ? +(totalDrop / activeHours).toFixed(2) : 0}
               unit="lượt/giờ"
-              subtitle={`Tính theo ca 8 tiếng`}
+              subtitle={`Giờ thao tác thực tế`}
               accentColor="var(--amber)"
               delay={400}
             />

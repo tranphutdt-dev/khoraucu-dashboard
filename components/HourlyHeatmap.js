@@ -221,6 +221,14 @@ export default function HourlyHeatmap({ hourlyRows, date, valueKey = 'tongKg', v
       for (const h of HOUR_LABELS) entry.hours[h] = (entry.hours[h] || 0) + (r.hours?.[h] || 0);
     });
     const arr = Array.from(map.values());
+    arr.forEach(row => {
+      let activeH = 0;
+      for (const h of HOUR_LABELS) {
+        if (row.hours[h] > 0) activeH++;
+      }
+      row.activeHours = activeH;
+    });
+
     if (sortBy === 'value') arr.sort((a, b) => b[valueKey] - a[valueKey]);
     else arr.sort((a, b) => a.nguoi.localeCompare(b.nguoi));
     return arr;
@@ -229,6 +237,7 @@ export default function HourlyHeatmap({ hourlyRows, date, valueKey = 'tongKg', v
   const maxCell    = useMemo(() => { let m=0; workerRows.forEach(r => HOUR_LABELS.forEach(h => { if (r.hours[h]>m) m=r.hours[h]; })); return m; }, [workerRows]);
   const hourTotals = useMemo(() => { const t={}; for (const h of HOUR_LABELS) t[h]=workerRows.reduce((s,r)=>s+(r.hours[h]||0),0); return t; }, [workerRows]);
   const grandTotal = useMemo(() => workerRows.reduce((s, r) => s + (r[valueKey] || 0), 0), [workerRows, valueKey]);
+  const totalActiveHours = useMemo(() => workerRows.reduce((s, r) => s + (r.activeHours || 0), 0), [workerRows]);
 
   const hasFilter = !nhomAllSelected || !nganhAllSelected;
 
@@ -378,11 +387,13 @@ export default function HourlyHeatmap({ hourlyRows, date, valueKey = 'tongKg', v
                 </th>
               ))}
               <th style={thStyle('right', 70)}>Tổng {valueLabel}</th>
+              <th style={thStyle('right', 90)}>TB {valueLabel}/Người/Giờ</th>
             </tr>
           </thead>
           <tbody>
             {workerRows.map((row, i) => {
               const col = GROUP_COLORS[row.nhom] || GROUP_COLORS['Others (Hub)'];
+              const avgPerHour = row.activeHours > 0 ? (row[valueKey] / row.activeHours) : 0;
               return (
                 <tr key={`${row.nhom}-${row.nguoi}-${i}`} style={{
                   background: i % 2 === 1 ? 'rgba(255,255,255,0.025)' : 'transparent',
@@ -414,6 +425,9 @@ export default function HourlyHeatmap({ hourlyRows, date, valueKey = 'tongKg', v
                   <td style={{ padding: '0.35rem 0.6rem', textAlign: 'right', fontWeight: 700, color: '#F0D06A', borderLeft: '1px solid rgba(255,255,255,0.1)' }}>
                     {(row[valueKey] || 0).toFixed(1)}
                   </td>
+                  <td style={{ padding: '0.35rem 0.6rem', textAlign: 'right', fontWeight: 700, color: 'var(--amber)', borderLeft: '1px solid rgba(255,255,255,0.1)' }}>
+                    {avgPerHour.toFixed(2)}
+                  </td>
                 </tr>
               );
             })}
@@ -433,6 +447,9 @@ export default function HourlyHeatmap({ hourlyRows, date, valueKey = 'tongKg', v
               })}
               <td style={{ padding: '0.4rem 0.6rem', textAlign: 'right', fontWeight: 700, color: '#F0D06A', fontSize: '0.85rem' }}>
                 {grandTotal.toFixed(1)}
+              </td>
+              <td style={{ padding: '0.4rem 0.6rem', textAlign: 'right', fontWeight: 700, color: 'var(--amber)', fontSize: '0.85rem' }}>
+                {totalActiveHours > 0 ? (grandTotal / totalActiveHours).toFixed(2) : 0}
               </td>
             </tr>
           </tbody>

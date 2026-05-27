@@ -520,6 +520,15 @@ export default function Dashboard() {
               accentColor="#F38144"
               delay={320}
             />
+            <KPICard
+              icon="⏱️"
+              label="Drop TB/Người/Giờ"
+              value={kpis.workerCount > 0 && numDays > 0 ? +(totalDrop / kpis.workerCount / numDays / 8).toFixed(2) : 0}
+              unit="lượt/giờ"
+              subtitle={`Tính theo ca 8 tiếng`}
+              accentColor="var(--amber)"
+              delay={400}
+            />
           </div>
 
           {/* ── Charts row ── */}

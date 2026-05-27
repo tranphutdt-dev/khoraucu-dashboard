@@ -48,8 +48,16 @@ function CustomTooltip({ active, payload, label }) {
           padding: '2px 8px',
           borderRadius: '100px',
           display: 'inline-block',
-          background: d.payload.nhom === 'HUYHOANG' ? 'rgba(56,115,182,0.25)' : 'rgba(45,141,84,0.25)',
-          color: d.payload.nhom === 'HUYHOANG' ? 'var(--blue-light)' : 'var(--green-light)',
+          background: (d.payload.nhom === 'HUYHOANG' || d.payload.nhom === 'PST') 
+            ? 'rgba(56,115,182,0.25)' 
+            : d.payload.nhom === 'NVCT'
+              ? 'rgba(212,86,12,0.25)'
+              : 'rgba(45,141,84,0.25)',
+          color: (d.payload.nhom === 'HUYHOANG' || d.payload.nhom === 'PST')
+            ? 'var(--blue-light)'
+            : d.payload.nhom === 'NVCT'
+              ? '#F38144'
+              : 'var(--green-light)',
         }}>
           {d.payload.nhom}
         </div>
@@ -75,7 +83,12 @@ function getBarColor(entry, tab) {
   if (tab === 'hub') {
     return entry.nhom === 'HUYHOANG' ? '#3873B6' : '#2D8D54';
   }
-  if (tab === 'linker') return '#217887';
+  if (tab === 'linker') {
+    if (entry.nhom === 'PST') return '#217887';
+    if (entry.nhom === 'NVCT') return '#D4560C';
+    if (entry.nhom === 'Green Human') return '#2D8D54';
+    return '#217887';
+  }
   // Tổng quan: colour by type
   return entry.loaiKho?.toLowerCase().includes('hub') ? '#3873B6' : '#217887';
 }

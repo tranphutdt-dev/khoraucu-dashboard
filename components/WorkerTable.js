@@ -13,6 +13,23 @@ function SortIcon({ direction }) {
 function GroupBadge({ nhom }) {
   if (!nhom) return null;
   const isHH = nhom.toUpperCase() === 'HUYHOANG';
+  const isPST = nhom.toUpperCase() === 'PST';
+  const isNVCT = nhom.toUpperCase() === 'NVCT';
+  
+  let bg = 'rgba(45,141,84,0.2)';
+  let color = 'var(--green-light)';
+  let border = 'rgba(45,141,84,0.35)';
+
+  if (isHH || isPST) {
+    bg = 'rgba(56,115,182,0.2)';
+    color = 'var(--blue-light)';
+    border = 'rgba(56,115,182,0.35)';
+  } else if (isNVCT) {
+    bg = 'rgba(212,86,12,0.2)';
+    color = '#F38144';
+    border = 'rgba(212,86,12,0.35)';
+  }
+
   return (
     <span style={{
       display: 'inline-block',
@@ -21,9 +38,9 @@ function GroupBadge({ nhom }) {
       padding: '2px 8px',
       borderRadius: '100px',
       letterSpacing: '0.04em',
-      background: isHH ? 'rgba(56,115,182,0.2)' : 'rgba(45,141,84,0.2)',
-      color: isHH ? 'var(--blue-light)' : 'var(--green-light)',
-      border: `1px solid ${isHH ? 'rgba(56,115,182,0.35)' : 'rgba(45,141,84,0.35)'}`,
+      background: bg,
+      color: color,
+      border: `1px solid ${border}`,
     }}>
       {nhom}
     </span>
@@ -55,7 +72,7 @@ export default function WorkerTable({ data = [], tab = 'linker' }) {
   const [sortKey, setSortKey] = useState('tongKg');
   const [sortDir, setSortDir] = useState('desc');
 
-  const showNhom   = tab === 'hub';
+  const showNhom   = tab === 'hub' || tab === 'linker';
   const showType   = tab === 'tongquan';
 
   function handleSort(key) {
@@ -208,11 +225,13 @@ export default function WorkerTable({ data = [], tab = 'linker' }) {
                       <div style={{
                         width: `${pct}%`,
                         height: '100%',
-                        background: row.nhom === 'HUYHOANG'
+                        background: (row.nhom === 'HUYHOANG' || row.nhom === 'PST')
                           ? 'var(--gradient-blue)'
-                          : row.loaiKho?.toLowerCase().includes('hub')
-                            ? 'var(--gradient-blue)'
-                            : 'var(--gradient-green)',
+                          : row.nhom === 'NVCT'
+                            ? 'linear-gradient(90deg, #D4560C 0%, #F38144 100%)'
+                            : row.loaiKho?.toLowerCase().includes('hub')
+                              ? 'var(--gradient-blue)'
+                              : 'var(--gradient-green)',
                         borderRadius: 3,
                         transition: 'width 0.6s ease',
                       }} />

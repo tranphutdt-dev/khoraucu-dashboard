@@ -11,6 +11,9 @@ import TabSwitcher      from '../components/TabSwitcher';
 import ProductivityChart from '../components/ProductivityChart';
 import TrendChart       from '../components/TrendChart';
 import WorkerTable      from '../components/WorkerTable';
+import GroupSummaryTable from '../components/GroupSummaryTable';
+import CategorySummaryTable from '../components/CategorySummaryTable';
+import HourlyHeatmap    from '../components/HourlyHeatmap';
 
 import styles from '../styles/Dashboard.module.css';
 
@@ -52,28 +55,47 @@ function toInputVal(iso) {
   return iso || '';
 }
 
-// Get previous ISO date
-function prevDay(iso) {
+function getDaysDiff(start, end) {
+  const s = new Date(start + 'T00:00:00');
+  const e = new Date(end + 'T00:00:00');
+  return Math.round((e - s) / (1000 * 60 * 60 * 24));
+}
+
+function shiftDate(iso, days) {
   const d = new Date(iso + 'T00:00:00');
-  d.setDate(d.getDate() - 1);
+  d.setDate(d.getDate() + days);
   return d.toISOString().slice(0, 10);
 }
 
-// ── Data filters ───────────────────────────────────────────
+// ── Data filters & grouping ───────────────────────────────────────────
 function filterByTab(rows, tab) {
   if (tab === 'linker')   return rows.filter(r => r.loaiKho?.toLowerCase().includes('linker'));
   if (tab === 'hub')      return rows.filter(r => r.loaiKho?.toLowerCase().includes('hub'));
   return rows; // tongquan = all
 }
 
+function groupRowsByWorker(rows) {
+  const map = new Map();
+  rows.forEach(r => {
+    const key = r.nguoi;
+    if (!map.has(key)) {
+      map.set(key, { ...r });
+    } else {
+      const existing = map.get(key);
+      existing.tongKg += r.tongKg;
+      existing.tongGram = (existing.tongGram || 0) + (r.tongGram || 0);
+    }
+  });
+  return Array.from(map.values());
+}
+
 // ── Trend aggregation (last 7 days) ───────────────────────
-function buildTrendData(rows, selectedDate, tab) {
-  // Collect all unique dates ≤ selectedDate, up to 7
+function buildTrendData(rows, startDate, endDate, tab) {
+  // Collect all unique dates within range
   const allDates = [...new Set(rows.map(r => r.date))]
     .filter(Boolean)
     .sort()
-    .filter(d => d <= selectedDate)
-    .slice(-7);
+    .filter(d => d >= startDate && d <= endDate);
 
   return allDates.map(date => {
     const dayRows  = rows.filter(r => r.date === date);
@@ -87,20 +109,17 @@ function buildTrendData(rows, selectedDate, tab) {
 }
 
 // ── KPI computation ────────────────────────────────────────
-function computeKPIs(todayRows, yesterdayRows, tab) {
-  const tRows = filterByTab(todayRows, tab);
-  const yRows = filterByTab(yesterdayRows, tab);
-
-  const totalKg  = tRows.reduce((s, r) => s + r.tongKg, 0);
-  const yTotalKg = yRows.reduce((s, r) => s + r.tongKg, 0);
+function computeKPIs(rangeRowsGrouped, prevRangeRowsGrouped) {
+  const totalKg  = rangeRowsGrouped.reduce((s, r) => s + r.tongKg, 0);
+  const yTotalKg = prevRangeRowsGrouped.reduce((s, r) => s + r.tongKg, 0);
   const trend    = yTotalKg > 0 ? ((totalKg - yTotalKg) / yTotalKg) * 100 : null;
 
   // Top performer by kg
-  const top = tRows.reduce((best, r) => (!best || r.tongKg > best.tongKg) ? r : best, null);
+  const top = rangeRowsGrouped.reduce((best, r) => (!best || r.tongKg > best.tongKg) ? r : best, null);
 
   return {
     totalKg,
-    workerCount: tRows.length,
+    workerCount: rangeRowsGrouped.length,
     top,
     trend,
     yTotalKg,
@@ -110,12 +129,16 @@ function computeKPIs(todayRows, yesterdayRows, tab) {
 // ── Main page ──────────────────────────────────────────────
 export default function Dashboard() {
   const [rows,         setRows]         = useState([]);
+  const [hourlyRows,   setHourlyRows]   = useState([]);
+  const [dropHourlyRows, setDropHourlyRows] = useState([]);
   const [loading,      setLoading]      = useState(true);
   const [error,        setError]        = useState(null);
   const [sheetMissing, setSheetMissing] = useState(false);
   const [activeTab,    setActiveTab]    = useState('linker');
-  const [selectedDate, setSelectedDate] = useState(null); // ISO string
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
   const [allDates,     setAllDates]     = useState([]);
+  const [categoryRows, setCategoryRows] = useState([]);
   const [lastRefresh,  setLastRefresh]  = useState(null);
 
   // ── Fetch data ───────────────────────────────────────────
@@ -138,16 +161,25 @@ export default function Dashboard() {
       }
 
       setSheetMissing(false);
-      const fetchedRows = json.rows || [];
-      setRows(fetchedRows);
+      
+      const allRows = json.rows || [];
+      const dataRows = allRows.filter(r => r.loaiKho !== 'Ngành hàng');
+      const catRows = allRows.filter(r => r.loaiKho === 'Ngành hàng');
+      
+      setRows(dataRows);
+      setCategoryRows(catRows);
+      setHourlyRows(json.hourlyRows || []);
+      setDropHourlyRows(json.dropHourlyRows || []);
 
       // Compute available dates
-      const dates = [...new Set(fetchedRows.map(r => r.date).filter(Boolean))].sort();
+      const dates = [...new Set(dataRows.map(r => r.date).filter(Boolean))].sort();
       setAllDates(dates);
 
-      // Default to the latest date available
+      // Default to the latest date available for both start and end
       if (dates.length > 0) {
-        setSelectedDate(prev => prev && dates.includes(prev) ? prev : dates[dates.length - 1]);
+        const latest = dates[dates.length - 1];
+        setStartDate(prev => prev && dates.includes(prev) ? prev : latest);
+        setEndDate(prev => prev && dates.includes(prev) ? prev : latest);
       }
 
       setLastRefresh(new Date());
@@ -161,23 +193,91 @@ export default function Dashboard() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   // ── Derived data ─────────────────────────────────────────
-  const todayRows     = useMemo(() => rows.filter(r => r.date === selectedDate), [rows, selectedDate]);
-  const yesterdayDate = useMemo(() => selectedDate ? prevDay(selectedDate) : null, [selectedDate]);
-  const yesterdayRows = useMemo(() => rows.filter(r => r.date === yesterdayDate), [rows, yesterdayDate]);
+  const rangeRows = useMemo(() => {
+    if (!startDate || !endDate) return rows;
+    return rows.filter(r => r.date >= startDate && r.date <= endDate);
+  }, [rows, startDate, endDate]);
 
-  const filteredRows  = useMemo(() => filterByTab(todayRows, activeTab), [todayRows, activeTab]);
-  const trendData     = useMemo(() => buildTrendData(rows, selectedDate || '', activeTab), [rows, selectedDate, activeTab]);
-  const kpis          = useMemo(() => computeKPIs(todayRows, yesterdayRows, activeTab), [todayRows, yesterdayRows, activeTab]);
+  const rangeCatRows = useMemo(() => {
+    if (!startDate || !endDate) return categoryRows;
+    return categoryRows.filter(r => r.date >= startDate && r.date <= endDate);
+  }, [categoryRows, startDate, endDate]);
+
+  const filteredRangeRows = useMemo(() => filterByTab(rangeRows, activeTab), [rangeRows, activeTab]);
+  const groupedRows = useMemo(() => groupRowsByWorker(filteredRangeRows), [filteredRangeRows]);
+
+  const prevRangeRows = useMemo(() => {
+    if (!startDate || !endDate) return [];
+    const diff = getDaysDiff(startDate, endDate) + 1;
+    const prevEnd = shiftDate(startDate, -1);
+    const prevStart = shiftDate(prevEnd, -(diff - 1));
+    return rows.filter(r => r.date >= prevStart && r.date <= prevEnd);
+  }, [rows, startDate, endDate]);
+  const filteredPrevRangeRows = useMemo(() => filterByTab(prevRangeRows, activeTab), [prevRangeRows, activeTab]);
+  const prevGroupedRows = useMemo(() => groupRowsByWorker(filteredPrevRangeRows), [filteredPrevRangeRows]);
+
+  const trendData = useMemo(() => buildTrendData(rows, startDate || '', endDate || '', activeTab), [rows, startDate, endDate, activeTab]);
+  const kpis = useMemo(() => computeKPIs(groupedRows, prevGroupedRows), [groupedRows, prevGroupedRows]);
 
   // Hub groups breakdown (for Hub tab legend)
-  const hubHH     = useMemo(() => filteredRows.filter(r => r.nhom?.toUpperCase() === 'HUYHOANG'), [filteredRows]);
-  const hubOthers = useMemo(() => filteredRows.filter(r => r.nhom?.toUpperCase() !== 'HUYHOANG' && r.nhom), [filteredRows]);
+  const hubHH = useMemo(() => groupedRows.filter(r => r.nhom?.toUpperCase() === 'HUYHOANG'), [groupedRows]);
+  const hubOthers = useMemo(() => groupedRows.filter(r => r.nhom?.toUpperCase() !== 'HUYHOANG' && r.nhom), [groupedRows]);
+
+  const linkerPST = useMemo(() => groupedRows.filter(r => r.nhom?.toUpperCase() === 'PST'), [groupedRows]);
+  const linkerNVCT = useMemo(() => groupedRows.filter(r => r.nhom?.toUpperCase() === 'NVCT'), [groupedRows]);
+  const linkerGH = useMemo(() => groupedRows.filter(r => r.nhom?.toUpperCase() === 'GREEN HUMAN'), [groupedRows]);
+
+  const linkerGroupsData = useMemo(() => {
+    if (activeTab !== 'linker' || groupedRows.length === 0) return [];
+    return [
+      {
+        name: 'PST',
+        count: linkerPST.length,
+        tongKg: linkerPST.reduce((s, r) => s + r.tongKg, 0),
+        bg: 'rgba(56,115,182,0.2)',
+        color: 'var(--blue-light)',
+        border: 'rgba(56,115,182,0.35)',
+        barColor: 'var(--gradient-blue)',
+      },
+      {
+        name: 'NVCT',
+        count: linkerNVCT.length,
+        tongKg: linkerNVCT.reduce((s, r) => s + r.tongKg, 0),
+        bg: 'rgba(212,86,12,0.2)',
+        color: '#F38144',
+        border: 'rgba(212,86,12,0.35)',
+        barColor: 'linear-gradient(90deg, #D4560C 0%, #F38144 100%)',
+      },
+      {
+        name: 'Green Human',
+        count: linkerGH.length,
+        tongKg: linkerGH.reduce((s, r) => s + r.tongKg, 0),
+        bg: 'rgba(45,141,84,0.2)',
+        color: 'var(--green-light)',
+        border: 'rgba(45,141,84,0.35)',
+        barColor: 'var(--gradient-green)',
+      }
+    ];
+  }, [activeTab, groupedRows, linkerPST, linkerNVCT, linkerGH]);
+
+  const catDataGrouped = useMemo(() => {
+    const map = new Map();
+    rangeCatRows.forEach(r => {
+      const key = r.nguoi;
+      if (!map.has(key)) {
+        map.set(key, { ...r });
+      } else {
+        const existing = map.get(key);
+        existing.tongKg += r.tongKg;
+        existing.tongGram = (existing.tongGram || 0) + (r.tongGram || 0);
+      }
+    });
+    return Array.from(map.values());
+  }, [rangeCatRows]);
 
   // ── Handlers ─────────────────────────────────────────────
-  function handleDateChange(e) {
-    const val = e.target.value; // "YYYY-MM-DD"
-    if (val) setSelectedDate(val);
-  }
+  function handleStartDateChange(e) { if (e.target.value) setStartDate(e.target.value); }
+  function handleEndDateChange(e) { if (e.target.value) setEndDate(e.target.value); }
 
   // ── Render: Loading ──────────────────────────────────────
   if (loading) {
@@ -242,7 +342,7 @@ export default function Dashboard() {
                 <h3>Chưa cấu hình Google Sheet ID</h3>
                 <p>
                   Hãy mở tệp <code>dashboard/.env.local</code> và điền giá trị{' '}
-                  <code>NEXT_PUBLIC_DASHBOARD_SHEET_ID=&lt;sheet-id&gt;</code>, sau đó khởi động lại server.
+                  <code>DASHBOARD_SHEET_ID=&lt;sheet-id&gt;</code>, sau đó khởi động lại server.
                   Sheet ID là chuỗi ký tự trong URL Google Sheets của bạn.
                 </p>
               </div>
@@ -251,22 +351,57 @@ export default function Dashboard() {
 
           {/* ── Controls bar ── */}
           <div className={styles.controlsBar}>
-            <div className={styles.datePickerGroup}>
-              <span className={styles.dateLabel}>📅 Ngày báo cáo:</span>
-              <input
-                type="date"
-                value={toInputVal(selectedDate)}
-                onChange={handleDateChange}
-                min={allDates[0] || ''}
-                max={allDates[allDates.length - 1] || ''}
+          <div className={styles.datePickerGroup}>
+              <span className={styles.dateLabel}>📅 Lọc dữ liệu:</span>
+
+              {/* Start date — only dates with data */}
+              <select
+                value={startDate || ''}
+                onChange={e => {
+                  const val = e.target.value;
+                  setStartDate(val);
+                  if (endDate && endDate < val) setEndDate(val);
+                }}
                 className={styles.dateInput}
-              />
-              {selectedDate && (
-                <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', fontWeight: 500 }}>
-                  ({fmtDisplay(selectedDate)})
+                title="Chọn ngày bắt đầu"
+              >
+                {allDates.map(d => (
+                  <option key={d} value={d} style={{ background: '#0F1923' }}>
+                    {fmtDisplay(d)}
+                  </option>
+                ))}
+              </select>
+
+              <span className={styles.dateSeparator}>—</span>
+
+              {/* End date — only dates >= startDate */}
+              <select
+                value={endDate || ''}
+                onChange={e => setEndDate(e.target.value)}
+                className={styles.dateInput}
+                title="Chọn ngày kết thúc"
+              >
+                {allDates.filter(d => !startDate || d >= startDate).map(d => (
+                  <option key={d} value={d} style={{ background: '#0F1923' }}>
+                    {fmtDisplay(d)}
+                  </option>
+                ))}
+              </select>
+
+              {/* Available dates badge */}
+              {allDates.length > 0 && (
+                <span style={{
+                  fontSize: '0.7rem', color: 'var(--text-muted)',
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '6px', padding: '0.2rem 0.5rem',
+                  whiteSpace: 'nowrap',
+                }}>
+                  {allDates.length} ngày
                 </span>
               )}
             </div>
+
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
               <TabSwitcher tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab} />
@@ -283,7 +418,7 @@ export default function Dashboard() {
               label="Tổng kg hôm nay"
               value={kpis.totalKg}
               unit="kg"
-              subtitle={`So với hôm qua: ${kpis.yTotalKg > 0 ? kpis.yTotalKg.toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + ' kg' : 'Không có dữ liệu'}`}
+              subtitle={`So với g.đoạn trước: ${kpis.yTotalKg > 0 ? kpis.yTotalKg.toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + ' kg' : 'Không có dữ liệu'}`}
               trend={kpis.trend}
               accentColor="var(--blue)"
               delay={0}
@@ -305,8 +440,8 @@ export default function Dashboard() {
               subtitle={activeTab === 'hub'
                 ? `HUYHOANG: ${hubHH.length} · Khác: ${hubOthers.length}`
                 : activeTab === 'linker'
-                  ? 'Ca làm việc hôm nay'
-                  : `Hub: ${todayRows.filter(r=>r.loaiKho?.toLowerCase().includes('hub')).length} · Linker: ${todayRows.filter(r=>r.loaiKho?.toLowerCase().includes('linker')).length}`}
+                  ? `PST: ${linkerPST.length} · NVCT: ${linkerNVCT.length} · GH: ${linkerGH.length}`
+                  : `Nhân viên làm việc trong giai đoạn này`}
               accentColor="var(--teal)"
               delay={160}
             />
@@ -315,7 +450,7 @@ export default function Dashboard() {
               label="Năng suất TB / người"
               value={kpis.workerCount > 0 ? +(kpis.totalKg / kpis.workerCount).toFixed(2) : 0}
               unit="kg"
-              subtitle={`Ngày ${fmtDisplay(selectedDate)}`}
+              subtitle={`Giai đoạn: ${fmtDisplay(startDate)} - ${fmtDisplay(endDate)}`}
               accentColor="var(--green)"
               delay={240}
             />
@@ -331,12 +466,28 @@ export default function Dashboard() {
                   Năng suất theo nhân viên
                 </span>
                 <span className={`${styles.cardBadge} ${activeTab === 'linker' ? styles.cardBadgeTeal : activeTab === 'hub' ? styles.cardBadgeBlue : styles.cardBadgeGreen}`}>
-                  {fmtDisplay(selectedDate)}
+                  {fmtDisplay(startDate) === fmtDisplay(endDate) ? fmtDisplay(startDate) : `${fmtDisplay(startDate)} - ${fmtDisplay(endDate)}`}
                 </span>
               </div>
 
               {/* Group legend for Hub tab */}
-              {activeTab === 'hub' && filteredRows.length > 0 && (
+              {activeTab === 'linker' && groupedRows.length > 0 && (
+                <div className={styles.legendRow}>
+                  <div className={styles.legendItem}>
+                    <div className={styles.legendDot} style={{ background: '#217887' }} />
+                    <span>PST ({linkerPST.length})</span>
+                  </div>
+                  <div className={styles.legendItem}>
+                    <div className={styles.legendDot} style={{ background: '#D4560C' }} />
+                    <span>NVCT ({linkerNVCT.length})</span>
+                  </div>
+                  <div className={styles.legendItem}>
+                    <div className={styles.legendDot} style={{ background: '#2D8D54' }} />
+                    <span>Green Human ({linkerGH.length})</span>
+                  </div>
+                </div>
+              )}
+              {activeTab === 'hub' && groupedRows.length > 0 && (
                 <div className={styles.legendRow}>
                   <div className={styles.legendItem}>
                     <div className={styles.legendDot} style={{ background: '#3873B6' }} />
@@ -350,7 +501,7 @@ export default function Dashboard() {
               )}
 
               <div className={styles.cardBody}>
-                <ProductivityChart data={filteredRows} tab={activeTab} />
+                <ProductivityChart data={groupedRows} tab={activeTab} />
               </div>
             </div>
 
@@ -377,9 +528,9 @@ export default function Dashboard() {
               <span className={styles.cardTitle}>
                 <span className={styles.cardIcon}>📋</span>
                 Chi tiết nhân viên
-                {filteredRows.length > 0 && (
+                {groupedRows.length > 0 && (
                   <span style={{ fontSize: '0.75rem', fontWeight: 400, color: 'var(--text-muted)', marginLeft: 8 }}>
-                    ({filteredRows.length} bản ghi)
+                    ({groupedRows.length} nhân viên)
                   </span>
                 )}
               </span>
@@ -396,7 +547,76 @@ export default function Dashboard() {
                 )}
               </div>
             </div>
-            <WorkerTable data={filteredRows} tab={activeTab} />
+            
+            {activeTab === 'linker' && groupedRows.length > 0 && (
+              <GroupSummaryTable groups={linkerGroupsData} />
+            )}
+
+            {activeTab === 'tongquan' && catDataGrouped.length > 0 && (
+              <CategorySummaryTable data={catDataGrouped} />
+            )}
+
+            {/* ── Hourly heatmap (Tổng quan only) ── */}
+            {activeTab === 'tongquan' && (
+              <div style={{ marginTop: '1.5rem' }}>
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: '0.75rem',
+                  marginBottom: '0.25rem', paddingBottom: '0.75rem',
+                  borderBottom: '1px solid rgba(255,255,255,0.08)',
+                }}>
+                  <span style={{ fontSize: '1.1rem' }}>⏱️</span>
+                  <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
+                    Năng suất theo giờ
+                  </span>
+                  <span style={{
+                    fontSize: '0.72rem', color: 'var(--text-muted)',
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '6px', padding: '0.2rem 0.5rem',
+                  }}>
+                    14:00 → 02:00
+                  </span>
+                  {hourlyRows.length === 0 && (
+                    <span style={{ fontSize: '0.72rem', color: '#F38144', marginLeft: 'auto' }}>
+                      ⚠️ Chạy agent để có dữ liệu giờ
+                    </span>
+                  )}
+                </div>
+                <HourlyHeatmap hourlyRows={hourlyRows} date={endDate} valueKey="tongKg" valueLabel="KG" unit="kg" />
+              </div>
+            )}
+
+            {/* ── Drop Hourly heatmap (Tổng quan only) ── */}
+            {activeTab === 'tongquan' && (
+              <div style={{ marginTop: '2.5rem' }}>
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: '0.75rem',
+                  marginBottom: '0.25rem', paddingBottom: '0.75rem',
+                  borderBottom: '1px solid rgba(255,255,255,0.08)',
+                }}>
+                  <span style={{ fontSize: '1.1rem' }}>⏱️</span>
+                  <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
+                    Số lượt Drop theo giờ
+                  </span>
+                  <span style={{
+                    fontSize: '0.72rem', color: 'var(--text-muted)',
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '6px', padding: '0.2rem 0.5rem',
+                  }}>
+                    14:00 → 02:00
+                  </span>
+                  {dropHourlyRows.length === 0 && (
+                    <span style={{ fontSize: '0.72rem', color: '#F38144', marginLeft: 'auto' }}>
+                      ⚠️ Chưa có dữ liệu Drop theo giờ
+                    </span>
+                  )}
+                </div>
+                <HourlyHeatmap hourlyRows={dropHourlyRows} date={endDate} valueKey="tongDrop" valueLabel="Drop" unit="lượt" />
+              </div>
+            )}
+
+            <WorkerTable data={groupedRows} tab={activeTab} />
           </div>
 
           {/* ── Footer ── */}
@@ -424,7 +644,7 @@ function Header({ lastRefresh }) {
         <div className={styles.headerLeft}>
           <div className={styles.logoMark}>🥬</div>
           <div className={styles.headerText}>
-            <h1>Kho Rau Củ — Dashboard Năng Suất</h1>
+            <h1>KHO RAU CỦ — DASHBOARD NĂNG SUẤT</h1>
             <p>Báo cáo năng suất phân loại hàng ngày · Supply Chain Intelligence</p>
           </div>
         </div>

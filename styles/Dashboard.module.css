@@ -79,10 +79,11 @@
 
 .headerText h1 {
   font-size: 1.3rem;
-  font-weight: 800;
+  font-weight: 600;
   color: #fff;
-  letter-spacing: -0.02em;
+  letter-spacing: 0.06em;
   line-height: 1.1;
+  text-transform: uppercase;
 }
 
 .headerText p {
@@ -155,6 +156,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .dateLabel {
@@ -162,6 +164,11 @@
   color: var(--text-secondary);
   font-weight: 500;
   white-space: nowrap;
+}
+
+.dateSeparator {
+  color: var(--text-muted);
+  font-weight: 500;
 }
 
 .dateInput {

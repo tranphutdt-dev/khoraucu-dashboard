@@ -227,7 +227,11 @@ export default function Dashboard() {
     return dropHourlyRows.filter(r => r.date >= startDate && r.date <= endDate);
   }, [dropHourlyRows, startDate, endDate]);
 
-  const filteredRangeDropRows = useMemo(() => filterByTab(rangeDropRows, activeTab), [rangeDropRows, activeTab]);
+  const filteredRangeDropRows = useMemo(() => {
+    // Collect allowed workers from groupedRows (which is already filtered by tab)
+    const allowedWorkers = new Set(groupedRows.map(r => r.nguoi));
+    return rangeDropRows.filter(r => allowedWorkers.has(r.nguoi));
+  }, [rangeDropRows, groupedRows]);
 
   const totalDrop = useMemo(() => filteredRangeDropRows.reduce((s, r) => s + (r.tongDrop || 0), 0), [filteredRangeDropRows]);
 
@@ -278,22 +282,37 @@ export default function Dashboard() {
   const tongQuanGroupStats = useMemo(() => {
     if (activeTab !== 'tongquan' || groupedRows.length === 0) return [];
     
-    // Create a map of worker -> total drops
+    // Create a map of worker -> { totalDrop, activeHours }
     const dropMap = new Map();
     filteredRangeDropRows.forEach(r => {
-      dropMap.set(r.nguoi, (dropMap.get(r.nguoi) || 0) + (r.tongDrop || 0));
+      let activeHrs = 0;
+      if (r.hours) {
+        Object.values(r.hours).forEach(val => {
+          if (val > 0) activeHrs += 1;
+        });
+      }
+      
+      if (!dropMap.has(r.nguoi)) {
+        dropMap.set(r.nguoi, { tongDrop: 0, activeHours: 0 });
+      }
+      const dm = dropMap.get(r.nguoi);
+      dm.tongDrop += (r.tongDrop || 0);
+      dm.activeHours += activeHrs;
     });
 
     const map = new Map();
     groupedRows.forEach(r => {
       const nhom = r.nhom || 'Khác';
       if (!map.has(nhom)) {
-        map.set(nhom, { nhom, count: 0, tongKg: 0, tongDrop: 0 });
+        map.set(nhom, { nhom, count: 0, tongKg: 0, tongDrop: 0, activeHours: 0 });
       }
       const existing = map.get(nhom);
       existing.count += 1;
       existing.tongKg += r.tongKg;
-      existing.tongDrop += dropMap.get(r.nguoi) || 0;
+      if (dropMap.has(r.nguoi)) {
+        existing.tongDrop += dropMap.get(r.nguoi).tongDrop;
+        existing.activeHours += dropMap.get(r.nguoi).activeHours;
+      }
     });
     return Array.from(map.values()).sort((a, b) => b.tongKg - a.tongKg);
   }, [activeTab, groupedRows, filteredRangeDropRows]);

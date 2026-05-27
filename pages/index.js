@@ -235,15 +235,28 @@ export default function Dashboard() {
 
   const dropStats = useMemo(() => {
     let totalDrop = 0;
-    let activeHours = 0;
+    const aggregated = new Map();
     filteredRangeDropRows.forEach(r => {
       totalDrop += (r.tongDrop || 0);
+      const key = `${r.date}|||${r.nguoi}`;
+      if (!aggregated.has(key)) {
+        aggregated.set(key, { hours: {} });
+      }
+      const entry = aggregated.get(key);
       if (r.hours) {
-        Object.values(r.hours).forEach(v => {
-          if (v > 0) activeHours++;
+        Object.keys(r.hours).forEach(h => {
+          entry.hours[h] = (entry.hours[h] || 0) + r.hours[h];
         });
       }
     });
+
+    let activeHours = 0;
+    aggregated.forEach(entry => {
+      Object.values(entry.hours).forEach(v => {
+        if (v > 0) activeHours++;
+      });
+    });
+
     return { totalDrop, activeHours };
   }, [filteredRangeDropRows]);
 
@@ -296,22 +309,36 @@ export default function Dashboard() {
   const tongQuanGroupStats = useMemo(() => {
     if (activeTab !== 'tongquan' || groupedRows.length === 0) return [];
     
-    // Create a map of worker -> { totalDrop, activeHours }
-    const dropMap = new Map();
+    // First, aggregate drop data by date + worker to avoid double counting active hours
+    const dateWorkerMap = new Map();
     filteredRangeDropRows.forEach(r => {
-      let activeHrs = 0;
+      const key = `${r.date}|||${r.nguoi}`;
+      if (!dateWorkerMap.has(key)) {
+        dateWorkerMap.set(key, { nguoi: r.nguoi, tongDrop: 0, hours: {} });
+      }
+      const entry = dateWorkerMap.get(key);
+      entry.tongDrop += (r.tongDrop || 0);
       if (r.hours) {
-        Object.values(r.hours).forEach(val => {
-          if (val > 0) activeHrs += 1;
+        Object.keys(r.hours).forEach(h => {
+          entry.hours[h] = (entry.hours[h] || 0) + r.hours[h];
         });
       }
+    });
+
+    // Now aggregate by worker
+    const workerDropMap = new Map();
+    dateWorkerMap.forEach(entry => {
+      let activeHrs = 0;
+      Object.values(entry.hours).forEach(v => {
+        if (v > 0) activeHrs++;
+      });
       
-      if (!dropMap.has(r.nguoi)) {
-        dropMap.set(r.nguoi, { tongDrop: 0, activeHours: 0 });
+      if (!workerDropMap.has(entry.nguoi)) {
+        workerDropMap.set(entry.nguoi, { tongDrop: 0, activeHours: 0 });
       }
-      const dm = dropMap.get(r.nguoi);
-      dm.tongDrop += (r.tongDrop || 0);
-      dm.activeHours += activeHrs;
+      const w = workerDropMap.get(entry.nguoi);
+      w.tongDrop += entry.tongDrop;
+      w.activeHours += activeHrs;
     });
 
     const map = new Map();
@@ -323,9 +350,9 @@ export default function Dashboard() {
       const existing = map.get(nhom);
       existing.count += 1;
       existing.tongKg += r.tongKg;
-      if (dropMap.has(r.nguoi)) {
-        existing.tongDrop += dropMap.get(r.nguoi).tongDrop;
-        existing.activeHours += dropMap.get(r.nguoi).activeHours;
+      if (workerDropMap.has(r.nguoi)) {
+        existing.tongDrop += workerDropMap.get(r.nguoi).tongDrop;
+        existing.activeHours += workerDropMap.get(r.nguoi).activeHours;
       }
     });
     return Array.from(map.values()).sort((a, b) => b.tongKg - a.tongKg);

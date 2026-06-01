@@ -35,7 +35,9 @@ function CustomTooltip({ active, payload, label }) {
       {payload.map((p, i) => (
         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: p.color, flexShrink: 0 }} />
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{p.name}:</span>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+            {p.name.includes('Forecast') ? `${p.name.replace(' Forecast', '')} (Dự báo)` : p.name}:
+          </span>
           <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fff' }}>
             {Number(p.value).toLocaleString('vi-VN', { maximumFractionDigits: 1 })} kg
           </span>
@@ -135,6 +137,46 @@ export default function TrendChart({ trendData = [], tab = 'linker' }) {
               strokeWidth={1.5}
               fill="none"
               strokeDasharray="5 3"
+              dot={false}
+            />
+          )}
+
+          {/* DỰ BÁO (FORECAST) LINES */}
+          {showHub && (
+            <Area
+              type="monotone"
+              dataKey="hubKgForecast"
+              name="Hub Forecast"
+              stroke="#3873B6"
+              strokeWidth={2}
+              fill="none"
+              strokeDasharray="4 4"
+              dot={{ fill: '#3873B6', r: 3, strokeWidth: 0 }}
+              activeDot={{ r: 5, fill: '#3873B6', stroke: '#fff', strokeWidth: 2 }}
+            />
+          )}
+          {showLinker && (
+            <Area
+              type="monotone"
+              dataKey="linkerKgForecast"
+              name="Linker Forecast"
+              stroke="#2D8D54"
+              strokeWidth={2}
+              fill="none"
+              strokeDasharray="4 4"
+              dot={{ fill: '#2D8D54', r: 3, strokeWidth: 0 }}
+              activeDot={{ r: 5, fill: '#2D8D54', stroke: '#fff', strokeWidth: 2 }}
+            />
+          )}
+          {tab === 'tongquan' && (
+            <Area
+              type="monotone"
+              dataKey="totalKgForecast"
+              name="Tổng Forecast"
+              stroke="#5B9BD5"
+              strokeWidth={1.5}
+              fill="none"
+              strokeDasharray="3 3"
               dot={false}
             />
           )}

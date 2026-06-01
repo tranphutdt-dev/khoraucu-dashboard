@@ -24,22 +24,22 @@ const TABS = [
     id: 'linker',
     label: 'Linker',
     icon: '🔗',
-    activeGradient: 'linear-gradient(135deg, #144F5A, #217887)',
-    shadowColor: 'rgba(33,120,135,0.4)',
+    activeGradient: 'var(--gradient-teal)',
+    shadowColor: 'rgba(6, 182, 212, 0.4)',
   },
   {
     id: 'hub',
     label: 'Hub',
     icon: '🏭',
-    activeGradient: 'linear-gradient(135deg, #1B3A6B, #3873B6)',
-    shadowColor: 'rgba(56,115,182,0.4)',
+    activeGradient: 'var(--gradient-purple)',
+    shadowColor: 'rgba(147, 51, 234, 0.4)',
   },
   {
     id: 'tongquan',
     label: 'Tổng quan',
     icon: '📊',
-    activeGradient: 'linear-gradient(135deg, #2D3A50, #4A6A8A)',
-    shadowColor: 'rgba(90,130,160,0.4)',
+    activeGradient: 'var(--gradient-blue)',
+    shadowColor: 'rgba(59, 130, 246, 0.4)',
   },
 ];
 
@@ -98,7 +98,7 @@ function buildTrendData(rows, startDate, endDate, tab) {
     .sort()
     .filter(d => d >= startDate && d <= endDate);
 
-  return allDates.map(date => {
+  const points = allDates.map(date => {
     const dayRows  = rows.filter(r => r.date === date);
     const hubRows  = dayRows.filter(r => r.loaiKho?.toLowerCase().includes('hub'));
     const lnkRows  = dayRows.filter(r => r.loaiKho?.toLowerCase().includes('linker'));
@@ -107,6 +107,64 @@ function buildTrendData(rows, startDate, endDate, tab) {
     const totalKg  = dayRows.reduce((s, r) => s + r.tongKg, 0);
     return { date, hubKg, linkerKg, totalKg };
   });
+
+  if (points.length >= 2) {
+    const n = points.length;
+    let sumX = 0, sumYHub = 0, sumYLinker = 0, sumYTotal = 0;
+    let sumXYHub = 0, sumXYLinker = 0, sumXYTotal = 0;
+    let sumX2 = 0;
+
+    for (let i = 0; i < n; i++) {
+      const x = i;
+      sumX += x;
+      sumX2 += x * x;
+      sumYHub += points[i].hubKg;
+      sumYLinker += points[i].linkerKg;
+      sumYTotal += points[i].totalKg;
+      
+      sumXYHub += x * points[i].hubKg;
+      sumXYLinker += x * points[i].linkerKg;
+      sumXYTotal += x * points[i].totalKg;
+    }
+
+    const denominator = (n * sumX2 - sumX * sumX);
+    const slopeHub = denominator === 0 ? 0 : (n * sumXYHub - sumX * sumYHub) / denominator;
+    const interceptHub = (sumYHub - slopeHub * sumX) / n;
+
+    const slopeLinker = denominator === 0 ? 0 : (n * sumXYLinker - sumX * sumYLinker) / denominator;
+    const interceptLinker = (sumYLinker - slopeLinker * sumX) / n;
+
+    const slopeTotal = denominator === 0 ? 0 : (n * sumXYTotal - sumX * sumYTotal) / denominator;
+    const interceptTotal = (sumYTotal - slopeTotal * sumX) / n;
+
+    const nextX = n;
+    let forecastHub = slopeHub * nextX + interceptHub;
+    let forecastLinker = slopeLinker * nextX + interceptLinker;
+    let forecastTotal = slopeTotal * nextX + interceptTotal;
+
+    if (forecastHub < 0) forecastHub = 0;
+    if (forecastLinker < 0) forecastLinker = 0;
+    if (forecastTotal < 0) forecastTotal = 0;
+
+    const lastDateStr = points[n - 1].date;
+    const nextDateObj = new Date(lastDateStr + 'T00:00:00');
+    nextDateObj.setDate(nextDateObj.getDate() + 1);
+    const nextDate = nextDateObj.toISOString().slice(0, 10);
+
+    points[n - 1].hubKgForecast = points[n - 1].hubKg;
+    points[n - 1].linkerKgForecast = points[n - 1].linkerKg;
+    points[n - 1].totalKgForecast = points[n - 1].totalKg;
+
+    points.push({
+      date: nextDate,
+      hubKgForecast: forecastHub,
+      linkerKgForecast: forecastLinker,
+      totalKgForecast: forecastTotal,
+      isForecast: true
+    });
+  }
+
+  return points;
 }
 
 // ── KPI computation ────────────────────────────────────────
@@ -263,6 +321,16 @@ export default function Dashboard() {
   const { totalDrop, activeHours } = dropStats;
 
   const trendData = useMemo(() => buildTrendData(rows, startDate || '', endDate || '', activeTab), [rows, startDate, endDate, activeTab]);
+  
+  const forecastKPI = useMemo(() => {
+    if (!trendData || trendData.length === 0) return null;
+    const forecastPoint = trendData.find(p => p.isForecast);
+    if (!forecastPoint) return null;
+    return activeTab === 'linker' ? forecastPoint.linkerKgForecast :
+           activeTab === 'hub' ? forecastPoint.hubKgForecast :
+           forecastPoint.totalKgForecast;
+  }, [trendData, activeTab]);
+
   const kpis = useMemo(() => computeKPIs(groupedRows, prevGroupedRows), [groupedRows, prevGroupedRows]);
 
   // Hub groups breakdown (for Hub tab legend)
@@ -540,8 +608,19 @@ export default function Dashboard() {
                 : activeTab === 'linker'
                   ? `PST: ${linkerPST.length} · NVCT: ${linkerNVCT.length} · GH: ${linkerGH.length}`
                   : `Nhân viên làm việc trong giai đoạn này`}
-              accentColor="var(--teal)"
+              trend={activeTab !== 'tongquan' ? null : null}
+              accentColor="var(--purple)"
               delay={160}
+            />
+            <KPICard
+              icon="🔮"
+              label="Dự báo ngày mai"
+              value={forecastKPI !== null ? forecastKPI : '—'}
+              unit="kg"
+              subtitle="Dựa trên xu hướng 7 ngày"
+              trend={null}
+              accentColor="var(--teal)"
+              delay={240}
             />
             <KPICard
               icon="📈"
@@ -572,71 +651,6 @@ export default function Dashboard() {
             />
           </div>
 
-          {/* ── Charts row ── */}
-          <div className={styles.chartsRow}>
-            {/* Productivity bar chart */}
-            <div className={styles.card} style={{ animationDelay: '0.15s' }}>
-              <div className={styles.cardHeader}>
-                <span className={styles.cardTitle}>
-                  <span className={styles.cardIcon}>📊</span>
-                  Năng suất theo nhân viên
-                </span>
-                <span className={`${styles.cardBadge} ${activeTab === 'linker' ? styles.cardBadgeTeal : activeTab === 'hub' ? styles.cardBadgeBlue : styles.cardBadgeGreen}`}>
-                  {fmtDisplay(startDate) === fmtDisplay(endDate) ? fmtDisplay(startDate) : `${fmtDisplay(startDate)} - ${fmtDisplay(endDate)}`}
-                </span>
-              </div>
-
-              {/* Group legend for Hub tab */}
-              {activeTab === 'linker' && groupedRows.length > 0 && (
-                <div className={styles.legendRow}>
-                  <div className={styles.legendItem}>
-                    <div className={styles.legendDot} style={{ background: '#217887' }} />
-                    <span>PST ({linkerPST.length})</span>
-                  </div>
-                  <div className={styles.legendItem}>
-                    <div className={styles.legendDot} style={{ background: '#D4560C' }} />
-                    <span>NVCT ({linkerNVCT.length})</span>
-                  </div>
-                  <div className={styles.legendItem}>
-                    <div className={styles.legendDot} style={{ background: '#2D8D54' }} />
-                    <span>Green Human ({linkerGH.length})</span>
-                  </div>
-                </div>
-              )}
-              {activeTab === 'hub' && groupedRows.length > 0 && (
-                <div className={styles.legendRow}>
-                  <div className={styles.legendItem}>
-                    <div className={styles.legendDot} style={{ background: '#3873B6' }} />
-                    <span>HUYHOANG ({hubHH.length} người)</span>
-                  </div>
-                  <div className={styles.legendItem}>
-                    <div className={styles.legendDot} style={{ background: '#2D8D54' }} />
-                    <span>Others ({hubOthers.length} người)</span>
-                  </div>
-                </div>
-              )}
-
-              <div className={styles.cardBody}>
-                <ProductivityChart data={groupedRows} tab={activeTab} />
-              </div>
-            </div>
-
-            {/* 7-day trend chart */}
-            <div className={styles.card} style={{ animationDelay: '0.25s' }}>
-              <div className={styles.cardHeader}>
-                <span className={styles.cardTitle}>
-                  <span className={styles.cardIcon}>📉</span>
-                  Xu hướng 7 ngày
-                </span>
-                <span className={`${styles.cardBadge} ${styles.cardBadgeBlue}`}>
-                  {trendData.length} ngày
-                </span>
-              </div>
-              <div className={styles.cardBody}>
-                <TrendChart trendData={trendData} tab={activeTab} />
-              </div>
-            </div>
-          </div>
 
           {/* ── Worker table ── */}
           <div className={styles.card} style={{ animationDelay: '0.35s' }}>
@@ -738,6 +752,72 @@ export default function Dashboard() {
             )}
 
             <WorkerTable data={groupedRows} tab={activeTab} />
+          </div>
+
+          {/* ── Charts row ── */}
+          <div className={styles.chartsRow} style={{ marginTop: '1.5rem' }}>
+            {/* Productivity bar chart */}
+            <div className={styles.card} style={{ animationDelay: '0.15s' }}>
+              <div className={styles.cardHeader}>
+                <span className={styles.cardTitle}>
+                  <span className={styles.cardIcon}>📊</span>
+                  Năng suất theo nhân viên
+                </span>
+                <span className={`${styles.cardBadge} ${activeTab === 'linker' ? styles.cardBadgeTeal : activeTab === 'hub' ? styles.cardBadgeBlue : styles.cardBadgeGreen}`}>
+                  {fmtDisplay(startDate) === fmtDisplay(endDate) ? fmtDisplay(startDate) : `${fmtDisplay(startDate)} - ${fmtDisplay(endDate)}`}
+                </span>
+              </div>
+
+              {/* Group legend for Hub tab */}
+              {activeTab === 'linker' && groupedRows.length > 0 && (
+                <div className={styles.legendRow}>
+                  <div className={styles.legendItem}>
+                    <div className={styles.legendDot} style={{ background: '#217887' }} />
+                    <span>PST ({linkerPST.length})</span>
+                  </div>
+                  <div className={styles.legendItem}>
+                    <div className={styles.legendDot} style={{ background: '#D4560C' }} />
+                    <span>NVCT ({linkerNVCT.length})</span>
+                  </div>
+                  <div className={styles.legendItem}>
+                    <div className={styles.legendDot} style={{ background: '#2D8D54' }} />
+                    <span>Green Human ({linkerGH.length})</span>
+                  </div>
+                </div>
+              )}
+              {activeTab === 'hub' && groupedRows.length > 0 && (
+                <div className={styles.legendRow}>
+                  <div className={styles.legendItem}>
+                    <div className={styles.legendDot} style={{ background: '#3873B6' }} />
+                    <span>HUYHOANG ({hubHH.length} người)</span>
+                  </div>
+                  <div className={styles.legendItem}>
+                    <div className={styles.legendDot} style={{ background: '#2D8D54' }} />
+                    <span>Others ({hubOthers.length} người)</span>
+                  </div>
+                </div>
+              )}
+
+              <div className={styles.cardBody}>
+                <ProductivityChart data={groupedRows} tab={activeTab} />
+              </div>
+            </div>
+
+            {/* 7-day trend chart */}
+            <div className={styles.card} style={{ animationDelay: '0.25s' }}>
+              <div className={styles.cardHeader}>
+                <span className={styles.cardTitle}>
+                  <span className={styles.cardIcon}>📉</span>
+                  Xu hướng 7 ngày
+                </span>
+                <span className={`${styles.cardBadge} ${styles.cardBadgeBlue}`}>
+                  {trendData.length} ngày
+                </span>
+              </div>
+              <div className={styles.cardBody}>
+                <TrendChart trendData={trendData} tab={activeTab} />
+              </div>
+            </div>
           </div>
 
           {/* ── Footer ── */}

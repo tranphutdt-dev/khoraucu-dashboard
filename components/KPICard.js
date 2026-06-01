@@ -72,9 +72,11 @@ export default function KPICard({
 
   return (
     <div style={{
-      background: 'var(--gradient-card)',
-      border: '1px solid var(--border-subtle)',
-      borderRadius: 'var(--radius-lg)',
+      background: 'var(--glass-bg)',
+      backdropFilter: 'var(--glass-blur)',
+      WebkitBackdropFilter: 'var(--glass-blur)',
+      border: '1px solid var(--glass-border)',
+      borderRadius: 'var(--radius-xl)',
       boxShadow: 'var(--shadow-card)',
       padding: '1.1rem 1.25rem',
       position: 'relative',

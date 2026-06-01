@@ -7,10 +7,10 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 const HOUR_LABELS = ['14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00','22:00','23:00','00:00','01:00','02:00'];
 
 const GROUP_COLORS = {
-  'PST':          { bg: '#1e5f6b', badge: '#3AAFBF' },
-  'NVCT':         { bg: '#1a5c35', badge: '#3EBF72' },
-  'Green Human':  { bg: '#1b3f7a', badge: '#4A90E2' },
-  'HUYHOANG':     { bg: '#7a3010', badge: '#F38144' },
+  'PST':          { bg: '#3B82F6', badge: '#60A5FA' }, // Blue
+  'NVCT':         { bg: '#F59E0B', badge: '#FCD34D' }, // Amber
+  'Green Human':  { bg: '#10B981', badge: '#34D399' }, // Green
+  'HUYHOANG':     { bg: '#9333EA', badge: '#C084FC' }, // Purple
   'Others (Hub)': { bg: '#3a3a3a', badge: '#9E9E9E' },
 };
 
@@ -99,9 +99,10 @@ function MultiDropdown({ options, selected, onChange, placeholder }) {
       {open && (
         <div style={{
           position: 'absolute', top: 'calc(100% + 4px)', left: 0, zIndex: 999,
-          background: '#0f1923', border: '1.5px solid rgba(56,115,182,0.4)',
+          background: 'var(--glass-bg)', backdropFilter: 'var(--glass-blur)', WebkitBackdropFilter: 'var(--glass-blur)',
+          border: '1px solid rgba(147, 51, 234, 0.4)',
           borderRadius: '10px', minWidth: '200px', maxHeight: '280px', overflowY: 'auto',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+          boxShadow: 'var(--shadow-card)',
           padding: '0.4rem 0',
         }}>
           {/* Select all */}
@@ -433,7 +434,7 @@ export default function HourlyHeatmap({ hourlyRows, date, valueKey = 'tongKg', v
             })}
 
             {/* Totals row */}
-            <tr style={{ background: 'rgba(27,58,107,0.45)', borderTop: '2px solid rgba(56,115,182,0.4)' }}>
+            <tr style={{ background: 'rgba(147, 51, 234, 0.15)', borderTop: '2px solid rgba(147, 51, 234, 0.4)' }}>
               <td colSpan={2} style={{ padding: '0.5rem 0.6rem', fontWeight: 700, color: '#fff', fontSize: '0.8rem' }}>
                 ∑ Tổng ({workerRows.length} người)
               </td>
@@ -485,9 +486,10 @@ function StatChip({ icon, label, val, unit }) {
 function thStyle(align, minW) {
   return {
     padding: '0.55rem 0.4rem', textAlign: align,
-    background: 'rgba(15,25,40,0.9)', color: 'rgba(255,255,255,0.6)',
+    background: 'rgba(12, 16, 36, 0.85)', backdropFilter: 'var(--glass-blur)', WebkitBackdropFilter: 'var(--glass-blur)', 
+    color: 'rgba(255,255,255,0.6)',
     fontWeight: 700, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.04em',
-    borderBottom: '2px solid rgba(56,115,182,0.35)',
+    borderBottom: '2px solid rgba(147, 51, 234, 0.35)',
     position: 'sticky', top: 0, zIndex: 2, minWidth: minW, whiteSpace: 'nowrap',
   };
 }

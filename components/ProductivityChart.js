@@ -20,11 +20,13 @@ function CustomTooltip({ active, payload, label }) {
   const d = payload[0];
   return (
     <div style={{
-      background: 'rgba(13,24,38,0.97)',
-      border: '1px solid var(--border-accent)',
+      background: 'var(--glass-bg)',
+      backdropFilter: 'var(--glass-blur)',
+      WebkitBackdropFilter: 'var(--glass-blur)',
+      border: '1px solid var(--glass-border)',
       borderRadius: '10px',
       padding: '10px 14px',
-      boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+      boxShadow: 'var(--shadow-card)',
       fontFamily: "'Outfit', sans-serif",
       minWidth: 160,
     }}>
@@ -49,15 +51,15 @@ function CustomTooltip({ active, payload, label }) {
           borderRadius: '100px',
           display: 'inline-block',
           background: (d.payload.nhom === 'HUYHOANG' || d.payload.nhom === 'PST') 
-            ? 'rgba(56,115,182,0.25)' 
+            ? 'rgba(59, 130, 246, 0.25)' 
             : d.payload.nhom === 'NVCT'
-              ? 'rgba(212,86,12,0.25)'
-              : 'rgba(45,141,84,0.25)',
+              ? 'rgba(245, 158, 11, 0.25)'
+              : 'rgba(147, 51, 234, 0.25)',
           color: (d.payload.nhom === 'HUYHOANG' || d.payload.nhom === 'PST')
             ? 'var(--blue-light)'
             : d.payload.nhom === 'NVCT'
-              ? '#F38144'
-              : 'var(--green-light)',
+              ? 'var(--amber-light)'
+              : 'var(--purple-light)',
         }}>
           {d.payload.nhom}
         </div>
@@ -81,16 +83,16 @@ function WorkerTick({ x, y, payload }) {
 // ── Colour resolver ────────────────────────────────────────
 function getBarColor(entry, tab) {
   if (tab === 'hub') {
-    return entry.nhom === 'HUYHOANG' ? '#3873B6' : '#2D8D54';
+    return entry.nhom === 'HUYHOANG' ? '#9333EA' : '#10B981'; // Purple / Green
   }
   if (tab === 'linker') {
-    if (entry.nhom === 'PST') return '#217887';
-    if (entry.nhom === 'NVCT') return '#D4560C';
-    if (entry.nhom === 'Green Human') return '#2D8D54';
-    return '#217887';
+    if (entry.nhom === 'PST') return '#3B82F6'; // Blue
+    if (entry.nhom === 'NVCT') return '#F59E0B'; // Amber
+    if (entry.nhom === 'Green Human') return '#10B981'; // Green
+    return '#06B6D4'; // Cyan
   }
   // Tổng quan: colour by type
-  return entry.loaiKho?.toLowerCase().includes('hub') ? '#3873B6' : '#217887';
+  return entry.loaiKho?.toLowerCase().includes('hub') ? '#9333EA' : '#06B6D4'; // Purple / Cyan
 }
 
 // ── Main component ─────────────────────────────────────────

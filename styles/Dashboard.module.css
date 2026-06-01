@@ -11,26 +11,40 @@
   overflow-x: hidden;
 }
 
-/* Subtle radial gradient backdrop */
+/* Cosmic abstract glowing orbs backdrop */
 .page::before {
   content: '';
   position: fixed;
   inset: 0;
   background:
-    radial-gradient(ellipse 80% 50% at 10% 0%, rgba(27,58,107,0.25) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 90% 100%, rgba(33,120,135,0.12) 0%, transparent 60%);
+    radial-gradient(ellipse 80% 60% at 0% 0%, rgba(147, 51, 234, 0.15) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 60% at 100% 100%, rgba(6, 182, 212, 0.1) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 50% at 50% 50%, rgba(59, 130, 246, 0.05) 0%, transparent 70%);
   pointer-events: none;
   z-index: 0;
+}
+
+/* Subtle noise texture over background */
+.page::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.02'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+  mix-blend-mode: overlay;
 }
 
 /* ── Top header / hero banner ───────────────────────────── */
 .header {
   position: relative;
   z-index: 10;
-  background: var(--gradient-header);
-  border-bottom: 1px solid var(--border-accent);
+  background: rgba(12, 16, 36, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border-subtle);
   padding: 0 2rem;
-  box-shadow: 0 4px 32px rgba(0,0,0,0.5);
+  box-shadow: 0 8px 32px 0 rgba(0,0,0,0.5);
   overflow: hidden;
 }
 
@@ -67,14 +81,15 @@
 .logoMark {
   width: 48px;
   height: 48px;
-  background: rgba(56,115,182,0.25);
-  border: 2px solid rgba(56,115,182,0.5);
+  background: rgba(147, 51, 234, 0.15);
+  border: 1px solid rgba(147, 51, 234, 0.4);
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.5rem;
   flex-shrink: 0;
+  box-shadow: 0 0 20px rgba(147, 51, 234, 0.2);
 }
 
 .headerText h1 {
@@ -235,18 +250,21 @@
 
 /* ── Section card ───────────────────────────────────────── */
 .card {
-  background: var(--gradient-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
   box-shadow: var(--shadow-card);
   overflow: hidden;
   animation: fadeInUp 0.4s ease both;
-  transition: box-shadow var(--transition-normal), border-color var(--transition-normal);
+  transition: all var(--transition-normal);
 }
 
 .card:hover {
   box-shadow: var(--shadow-hover);
-  border-color: var(--border-accent);
+  border-color: rgba(147, 51, 234, 0.3);
+  transform: translateY(-2px);
 }
 
 .cardHeader {

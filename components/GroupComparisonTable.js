@@ -11,8 +11,8 @@ export default function GroupComparisonTable({ data, numDays = 1 }) {
     color: 'var(--text-muted)',
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
-    borderBottom: '1px solid var(--border-subtle)',
-    background: 'rgba(0,0,0,0.2)',
+    borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+    background: 'rgba(255, 255, 255, 0.03)',
   };
 
   return (
@@ -47,10 +47,16 @@ export default function GroupComparisonTable({ data, numDays = 1 }) {
                   key={row.nhom}
                   style={{
                     borderBottom: '1px solid rgba(255,255,255,0.04)',
-                    transition: 'background 0.15s ease',
+                    transition: 'background 0.15s ease, transform 0.15s ease',
                   }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                    e.currentTarget.style.transform = 'scale(1.005)';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }}
                 >
                   <td style={{ padding: '12px 12px', fontWeight: 700, color: 'var(--text-primary)' }}>
                     {row.nhom}

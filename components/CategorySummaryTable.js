@@ -18,8 +18,8 @@ export default function CategorySummaryTable({ data = [] }) {
     color: 'var(--text-muted)',
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
-    borderBottom: '1px solid var(--border-subtle)',
-    background: 'rgba(0,0,0,0.2)',
+    borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+    background: 'rgba(255, 255, 255, 0.03)',
   };
 
   return (
@@ -51,11 +51,17 @@ export default function CategorySummaryTable({ data = [] }) {
                   key={cat.nguoi}
                   style={{
                     borderBottom: '1px solid rgba(255,255,255,0.04)',
-                    transition: 'background 0.15s ease',
-                    background: isTop ? 'rgba(56,115,182,0.06)' : 'transparent',
+                    transition: 'background 0.15s ease, transform 0.15s ease',
+                    background: isTop ? 'rgba(59, 130, 246, 0.08)' : 'transparent',
                   }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
-                  onMouseLeave={e => e.currentTarget.style.background = isTop ? 'rgba(56,115,182,0.06)' : 'transparent'}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                    e.currentTarget.style.transform = 'scale(1.005)';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = isTop ? 'rgba(59, 130, 246, 0.08)' : 'transparent';
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }}
                 >
                   <td style={{ padding: '9px 12px', textAlign: 'center' }}>
                     {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : (

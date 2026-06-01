@@ -21,13 +21,13 @@ function GroupBadge({ nhom }) {
   let border = 'rgba(45,141,84,0.35)';
 
   if (isHH || isPST) {
-    bg = 'rgba(56,115,182,0.2)';
+    bg = 'rgba(59, 130, 246, 0.2)'; /* glass blue */
     color = 'var(--blue-light)';
-    border = 'rgba(56,115,182,0.35)';
+    border = 'rgba(59, 130, 246, 0.4)';
   } else if (isNVCT) {
-    bg = 'rgba(212,86,12,0.2)';
-    color = '#F38144';
-    border = 'rgba(212,86,12,0.35)';
+    bg = 'rgba(245, 158, 11, 0.2)'; /* glass amber */
+    color = 'var(--amber-light)';
+    border = 'rgba(245, 158, 11, 0.4)';
   }
 
   return (
@@ -58,9 +58,9 @@ function TypeBadge({ type }) {
       fontWeight: 700,
       padding: '2px 8px',
       borderRadius: '100px',
-      background: isHub ? 'rgba(56,115,182,0.15)' : 'rgba(33,120,135,0.15)',
-      color: isHub ? 'var(--blue-light)' : 'var(--teal-light)',
-      border: `1px solid ${isHub ? 'rgba(56,115,182,0.3)' : 'rgba(33,120,135,0.3)'}`,
+      background: isHub ? 'rgba(147, 51, 234, 0.15)' : 'rgba(6, 182, 212, 0.15)',
+      color: isHub ? 'var(--purple-light)' : 'var(--teal-light)',
+      border: `1px solid ${isHub ? 'rgba(147, 51, 234, 0.3)' : 'rgba(6, 182, 212, 0.3)'}`,
     }}>
       {type}
     </span>
@@ -111,8 +111,8 @@ export default function WorkerTable({ data = [], tab = 'linker' }) {
     cursor: 'pointer',
     userSelect: 'none',
     whiteSpace: 'nowrap',
-    borderBottom: '1px solid var(--border-subtle)',
-    background: 'rgba(0,0,0,0.2)',
+    borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+    background: 'rgba(255, 255, 255, 0.03)',
     transition: 'color 0.15s ease',
   });
 
@@ -162,11 +162,17 @@ export default function WorkerTable({ data = [], tab = 'linker' }) {
                 key={`${row.nguoi}-${idx}`}
                 style={{
                   borderBottom: '1px solid rgba(255,255,255,0.04)',
-                  transition: 'background 0.15s ease',
-                  background: isTop ? 'rgba(56,115,182,0.06)' : 'transparent',
+                  transition: 'background 0.15s ease, transform 0.15s ease',
+                  background: isTop ? 'rgba(147, 51, 234, 0.08)' : 'transparent',
                 }}
-                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
-                onMouseLeave={e => e.currentTarget.style.background = isTop ? 'rgba(56,115,182,0.06)' : 'transparent'}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                  e.currentTarget.style.transform = 'scale(1.005)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = isTop ? 'rgba(147, 51, 234, 0.08)' : 'transparent';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
               >
                 {/* Rank */}
                 <td style={{ padding: '9px 12px', textAlign: 'center' }}>
@@ -228,10 +234,10 @@ export default function WorkerTable({ data = [], tab = 'linker' }) {
                         background: (row.nhom === 'HUYHOANG' || row.nhom === 'PST')
                           ? 'var(--gradient-blue)'
                           : row.nhom === 'NVCT'
-                            ? 'linear-gradient(90deg, #D4560C 0%, #F38144 100%)'
+                            ? 'var(--gradient-amber)'
                             : row.loaiKho?.toLowerCase().includes('hub')
-                              ? 'var(--gradient-blue)'
-                              : 'var(--gradient-green)',
+                              ? 'var(--gradient-purple)'
+                              : 'var(--gradient-teal)',
                         borderRadius: 3,
                         transition: 'width 0.6s ease',
                       }} />
@@ -245,7 +251,7 @@ export default function WorkerTable({ data = [], tab = 'linker' }) {
         </tbody>
         {/* Totals footer */}
         <tfoot>
-          <tr style={{ borderTop: '2px solid var(--border-accent)', background: 'rgba(56,115,182,0.08)' }}>
+          <tr style={{ borderTop: '2px solid var(--border-accent)', background: 'rgba(147, 51, 234, 0.08)' }}>
             <td colSpan={showNhom || showType ? 3 : 2} style={{ padding: '10px 12px', fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Tổng cộng ({data.length} nhân viên)
             </td>
